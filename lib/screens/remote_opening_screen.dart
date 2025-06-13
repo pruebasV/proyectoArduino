@@ -11,11 +11,11 @@ class RemoteOpeningScreen extends StatefulWidget {
 class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
   // Estados de los sistemas
   bool _sistemaRiego =true;
+  bool _leds = true;
+  bool _buzzer = true;
   bool _ventilacion = true;
-  bool _iluminacion = true;
-  bool _calefaccion = true;
-  bool _cortinas = true;
-  bool _sistemaSeguridad = true;
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -57,50 +57,30 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
             // Ventilación
             _buildSystemCard(
               icon: Icons.air,
-              title: 'Ventilación',
-              value: _ventilacion,
-              onChanged: (value) => setState(() => _ventilacion = value),
+              title: 'Leds',
+              value: _leds,
+              onChanged: (value) => setState(() => _leds = value),
               color: Colors.green,
             ),
             
             // Iluminación
             _buildSystemCard(
               icon: Icons.lightbulb,
-              title: 'Iluminación',
-              value: _iluminacion,
-              onChanged: (value) => setState(() => _iluminacion = value),
+              title: 'buzzer',
+              value: _buzzer,
+              onChanged: (value) => setState(() => _buzzer = value),
               color: Colors.amber,
             ),
             
             // Calefacción
             _buildSystemCard(
               icon: Icons.thermostat,
-              title: 'Calefacción',
-              value: _calefaccion,
-              onChanged: (value) => setState(() => _calefaccion = value),
+              title: 'Ventilación',
+              value: _ventilacion,
+              onChanged: (value) => setState(() => _ventilacion = value),
               color: Colors.orange,
             ),
-            
-            // Cortinas
-            _buildSystemCard(
-              icon: Icons.curtains,
-              title: 'Cortinas',
-              value: _cortinas,
-              onChanged: (value) => setState(() => _cortinas = value),
-              color: Colors.purple,
-            ),
-            
-            // Sistema de seguridad
-            _buildSystemCard(
-              icon: Icons.security,
-              title: 'Sistema de Seguridad',
-              value: _sistemaSeguridad,
-              onChanged: (value) => setState(() => _sistemaSeguridad = value),
-              color: Colors.red,
-            ),
-            
-            const SizedBox(height: 30),
-            
+
             // Botón de aplicar cambios
             ElevatedButton.icon(
               onPressed: _applyChanges,
@@ -124,10 +104,8 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
     final activeCount = [
       _sistemaRiego,
       _ventilacion,
-      _iluminacion,
-      _calefaccion,
-      _cortinas,
-      _sistemaSeguridad
+      _leds,
+      _buzzer,
     ].where((state) => state).length;
 
     return Card(
@@ -222,18 +200,15 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
   void _toggleAllSystems() {
     final allActive = !_sistemaRiego ||
         !_ventilacion ||
-        !_iluminacion ||
-        !_calefaccion ||
-        !_cortinas ||
-        !_sistemaSeguridad;
+        !_leds ||
+        !_buzzer ||
+        !_sistemaRiego;
 
     setState(() {
       _sistemaRiego = allActive;
       _ventilacion = allActive;
-      _iluminacion = allActive;
-      _calefaccion = allActive;
-      _cortinas = allActive;
-      _sistemaSeguridad = allActive;
+      _leds = allActive;
+      _buzzer = allActive;
     });
   }
 
@@ -253,12 +228,10 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
 
   int _countActiveSystems() {
     return [
-      _sistemaRiego,
+      _buzzer,
       _ventilacion,
-      _iluminacion,
-      _calefaccion,
-      _cortinas,
-      _sistemaSeguridad
+      _leds,
+      _sistemaRiego,
     ].where((state) => state).length;
   }
 }
