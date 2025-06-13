@@ -25,6 +25,7 @@ class ActivityLogScreen extends StatelessWidget {
             _buildLogEntry('Alerta de temperatura resuelta', 'Ayer, 8:45 PM', Icons.warning),
             _buildLogEntry('Calibración completada', 'Ayer, 6:30 PM', Icons.tune),
             _buildLogEntry('Sistema iniciado', 'Ayer, 5:00 PM', Icons.power),
+            _buildLogEntry('Mantenimiento realizado', 'Ayer, 3:20 PM', Icons.build),  
           ],
         ),
       ),

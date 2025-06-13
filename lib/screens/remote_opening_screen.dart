@@ -128,10 +128,10 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
                     style: TextStyle(fontSize: 18, color: Colors.white),
                   ),
                   Text(
-                    '$activeCount de 6 sistemas activos',
+                    '$activeCount de 4 sistemas activos',
                     style: TextStyle(
                       fontSize: 16,
-                      color: activeCount > 3 ? Colors.green : Colors.amber,
+                      color: activeCount > 2 ? Colors.green : Colors.amber,
                     ),
                   ),
                 ],
