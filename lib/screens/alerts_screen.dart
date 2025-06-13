@@ -28,74 +28,44 @@ class AlertsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Card(
-              color: const Color(0xFF1D1E33),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.warning, color: Colors.amber),
-                        SizedBox(width: 10),
-                        Text(
-                          'Alerta de temperatura',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'La temperatura ha excedido los 30°C',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    Text(
-                      'Hoy, 10:30 AM',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 15),
-            Card(
-              color: const Color(0xFF1D1E33),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.security, color: Colors.red),
-                        SizedBox(width: 10),
-                        Text(
-                          'Alerta de seguridad',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    Text(
-                      'Movimiento detectado en zona restringida',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    Text(
-                      'Ayer, 8:45 PM',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildAlertCard(
+                    title: 'Alerta de temperatura',
+                    description: 'La temperatura ha excedido los 30°C',
+                    time: 'Hoy, 10:30 AM',
+                    icon: Icons.warning,
+                    iconColor: Colors.amber,
+                  ),
+                  const SizedBox(height: 15),
+                  _buildAlertCard(
+                    title: 'Alerta de seguridad',
+                    description: 'Movimiento detectado en zona restringida',
+                    time: 'Ayer, 8:45 PM',
+                    icon: Icons.security,
+                    iconColor: Colors.red,
+                  ),
+                  const SizedBox(height: 15),
+                  _buildAlertCard(
+                    title: 'Sistema de riego fallido',
+                    description: 'Baja presión detectada en tubería principal',
+                    time: 'Ayer, 5:20 PM',
+                    icon: Icons.water_damage,
+                    iconColor: Colors.blue,
+                  ),
+                  const SizedBox(height: 15),
+                  _buildAlertCard(
+                    title: 'Batería baja',
+                    description: 'Sistema de respaldo al 15% de capacidad',
+                    time: 'Ayer, 2:45 PM',
+                    icon: Icons.battery_alert,
+                    iconColor: Colors.orange,
+                  ),
+                ],
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.email),
@@ -113,5 +83,47 @@ class AlertsScreen extends StatelessWidget {
       ),
     );
   }
-}
 
+  Widget _buildAlertCard({
+    required String title,
+    required String description,
+    required String time,
+    required IconData icon,
+    required Color iconColor,
+  }) {
+    return Card(
+      color: const Color(0xFF1D1E33),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: iconColor),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              description,
+              style: const TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              time,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
