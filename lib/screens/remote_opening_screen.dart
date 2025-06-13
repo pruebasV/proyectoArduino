@@ -65,7 +65,7 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
             
             // Iluminación
             _buildSystemCard(
-              icon: Icons.lightbulb,
+              icon: Icons.volume_up,
               title: 'buzzer',
               value: _buzzer,
               onChanged: (value) => setState(() => _buzzer = value),
