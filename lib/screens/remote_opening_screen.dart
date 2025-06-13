@@ -56,11 +56,11 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
             
             // Ventilación
             _buildSystemCard(
-              icon: Icons.air,
+              icon: Icons.light,
               title: 'Leds',
               value: _leds,
               onChanged: (value) => setState(() => _leds = value),
-              color: Colors.green,
+              color: Colors.red,
             ),
             
             // Iluminación
@@ -74,11 +74,11 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
             
             // Calefacción
             _buildSystemCard(
-              icon: Icons.thermostat,
+              icon: Icons.air,
               title: 'Ventilación',
               value: _ventilacion,
               onChanged: (value) => setState(() => _ventilacion = value),
-              color: Colors.orange,
+              color: Colors.blue,
             ),
 
             // Botón de aplicar cambios
