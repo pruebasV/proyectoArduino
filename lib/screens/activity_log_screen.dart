@@ -1,11 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/intl.dart';
 import '../app_theme.dart';
 
-class ActivityLogScreen extends StatelessWidget {
+class ActivityLogScreen extends StatefulWidget {
   const ActivityLogScreen({super.key});
 
   @override
+  State<ActivityLogScreen> createState() => _ActivityLogScreenState();
+}
+
+class _ActivityLogScreenState extends State<ActivityLogScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _logs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLogs();
+  }
+
+  Future<void> _loadLogs() async {
+    try {
+      await Firebase.initializeApp();
+      
+      _firestore.collection('logs')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+          setState(() {
+            _logs = snapshot.docs.map((doc) {
+              final data = doc.data();
+              return {
+                'title': data['title'] ?? '',
+                'description': data['description'] ?? '',
+                'timestamp': _formatTimestamp(data['timestamp'] as Timestamp),
+                'icon': _parseIcon(data['type']),
+              };
+            }).toList();
+            _isLoading = false;
+          });
+        });
+    } catch (e) {
+      print('Error loading logs: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatTimestamp(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    
+    if (date.isAfter(today)) {
+      return 'Hoy, ${DateFormat('h:mm a').format(date)}';
+    } else if (date.isAfter(yesterday)) {
+      return 'Ayer, ${DateFormat('h:mm a').format(date)}';
+    } else {
+      return DateFormat('dd/MM/yyyy, h:mm a').format(date);
+    }
+  }
+
+  IconData _parseIcon(String? type) {
+    switch (type) {
+      case 'system_change': return Icons.settings;
+      case 'calibration': return Icons.tune;
+      case 'alert': return Icons.warning;
+      case 'maintenance': return Icons.build;
+      case 'system_start': return Icons.power;
+      default: return Icons.info;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('REGISTRO DE ACTIVIDAD'),
@@ -18,15 +96,16 @@ class ActivityLogScreen extends StatelessWidget {
       backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            _buildLogEntry('Apertura remota activada', 'Hoy, 10:30 AM', Icons.control_point),
-            _buildLogEntry('Cobertura manual cerrada', 'Hoy, 9:15 AM', Icons.chevron_right_rounded),
-            _buildLogEntry('Alerta de temperatura resuelta', 'Ayer, 8:45 PM', Icons.warning),
-            _buildLogEntry('Calibración completada', 'Ayer, 6:30 PM', Icons.tune),
-            _buildLogEntry('Sistema iniciado', 'Ayer, 5:00 PM', Icons.power),
-            _buildLogEntry('Mantenimiento realizado', 'Ayer, 3:20 PM', Icons.build),  
-          ],
+        child: ListView.builder(
+          itemCount: _logs.length,
+          itemBuilder: (context, index) {
+            final log = _logs[index];
+            return _buildLogEntry(
+              log['title'] as String,
+              log['timestamp'] as String,
+              log['icon'] as IconData,
+            );
+          },
         ),
       ),
     );

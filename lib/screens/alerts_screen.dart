@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../app_theme.dart';
 
-// Modelo de datos para las alertas
 class Alert {
-  final int id;
+  final String id;
   final String title;
   final String description;
   final DateTime timestamp;
@@ -85,67 +86,71 @@ class AlertService {
 }
 
 class AlertsScreen extends StatefulWidget {
-  // En el futuro, recibiremos las alertas de la Raspberry Pi
-  final List<Alert> initialAlerts;
-  
-  const AlertsScreen({
-    super.key,
-    this.initialAlerts = const [],
-  });
+  const AlertsScreen({super.key});
 
   @override
   State<AlertsScreen> createState() => _AlertsScreenState();
 }
 
 class _AlertsScreenState extends State<AlertsScreen> {
-  bool _isSending = false;
-  late List<Alert> _alerts;
-  
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLoading = true;
+  List<Alert> _alerts = [];
+
   @override
   void initState() {
     super.initState();
-    // Usar alertas iniciales o datos de demostración
-    _alerts = widget.initialAlerts.isNotEmpty
-        ? widget.initialAlerts
-        : _demoAlerts();
+    _loadAlerts();
   }
 
-  // Datos de demostración (se reemplazarán con datos reales de la Raspberry)
-  List<Alert> _demoAlerts() {
-    return [
-      Alert(
-        id: 1,
-        title: 'Alerta de temperatura',
-        description: 'La temperatura ha excedido los 30°C',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        icon: Icons.warning,
-        iconColor: Colors.amber,
-      ),
-      Alert(
-        id: 2,
-        title: 'Alerta de seguridad',
-        description: 'Movimiento detectado en zona restringida',
-        timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-        icon: Icons.security,
-        iconColor: Colors.red,
-      ),
-      Alert(
-        id: 3,
-        title: 'Sistema de riego fallido',
-        description: 'Baja presión detectada en tubería principal',
-        timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
-        icon: Icons.water_damage,
-        iconColor: Colors.blue,
-      ),
-      Alert(
-        id: 4,
-        title: 'Batería baja',
-        description: 'Sistema de respaldo al 15% de capacidad',
-        timestamp: DateTime.now().subtract(const Duration(days: 1, hours: 9)),
-        icon: Icons.battery_alert,
-        iconColor: Colors.orange,
-      ),
-    ];
+  Future<void> _loadAlerts() async {
+    try {
+      await Firebase.initializeApp();
+      
+      _firestore.collection('alerts')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+          setState(() {
+            _alerts = snapshot.docs.map((doc) {
+              final data = doc.data();
+              return Alert(
+                id: doc.id,
+                title: data['title'] ?? '',
+                description: data['description'] ?? '',
+                timestamp: (data['timestamp'] as Timestamp).toDate(),
+                icon: _parseIcon(data['icon']),
+                iconColor: _parseColor(data['color']),
+                selected: false,
+              );
+            }).toList();
+            _isLoading = false;
+          });
+        });
+    } catch (e) {
+      print('Error loading alerts: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  IconData _parseIcon(String? icon) {
+    switch (icon) {
+      case 'warning': return Icons.warning;
+      case 'security': return Icons.security;
+      case 'water': return Icons.water_damage;
+      case 'battery': return Icons.battery_alert;
+      default: return Icons.notification_important;
+    }
+  }
+
+  Color _parseColor(String? color) {
+    switch (color) {
+      case 'amber': return Colors.amber;
+      case 'red': return Colors.red;
+      case 'blue': return Colors.blue;
+      case 'orange': return Colors.orange;
+      default: return Colors.grey;
+    }
   }
 
   Future<void> _sendAlerts() async {
@@ -156,7 +161,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       return;
     }
 
-    setState(() => _isSending = true);
+    setState(() => _isLoading = true);
 
     try {
       await AlertService.sendSMS(selectedAlerts, '+593968127813');
@@ -166,7 +171,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       _showSnackBar('Error al enviar alertas: $e', Colors.red);
     } finally {
       if (mounted) {
-        setState(() => _isSending = false);
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -193,6 +198,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('ALERTAS'),
+          backgroundColor: const Color(0xFF1D1E33),
+        ),
+        backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final selectedCount = _alerts.where((alert) => alert.selected).length;
 
     return Scaffold(
@@ -202,7 +218,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.email),
-            onPressed: _isSending ? null : _sendAlerts,
+            onPressed: _isLoading ? null : _sendAlerts,
             tooltip: 'Enviar alertas automáticamente',
           ),
         ],
@@ -246,12 +262,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
               ),
               _SendButton(
                 selectedCount: selectedCount,
-                isSending: _isSending,
+                isSending: _isLoading,
                 onPressed: _sendAlerts,
               ),
             ],
           ),
-          if (_isSending)
+          if (_isLoading)
             Container(
               color: Colors.black54,
               child: const Center(
@@ -417,4 +433,4 @@ class _SendButton extends StatelessWidget {
       ),
     );
   }
-} 
+}

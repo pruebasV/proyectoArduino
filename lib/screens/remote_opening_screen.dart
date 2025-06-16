@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../app_theme.dart';
 
 class RemoteOpeningScreen extends StatefulWidget {
@@ -9,16 +11,123 @@ class RemoteOpeningScreen extends StatefulWidget {
 }
 
 class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLoading = true;
+  
   // Estados de los sistemas
-  bool _sistemaRiego =true;
-  bool _leds = true;
-  bool _buzzer = true;
-  bool _ventilacion = true;
+  bool _sistemaRiego = false;
+  bool _leds = false;
+  bool _buzzer = false;
+  bool _ventilacion = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSystemStates();
+  }
 
+  Future<void> _loadSystemStates() async {
+    try {
+      await Firebase.initializeApp();
+      
+      DocumentSnapshot doc = await _firestore.collection('systems').doc('current_state').get();
+      
+      if (doc.exists) {
+        setState(() {
+          _sistemaRiego = doc['irrigation'] ?? false;
+          _leds = doc['leds'] ?? false;
+          _buzzer = doc['buzzer'] ?? false;
+          _ventilacion = doc['ventilation'] ?? false;
+          _isLoading = false;
+        });
+      } else {
+        await _saveSystemStates();
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      print('Error loading system states: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveSystemStates() async {
+    await _firestore.collection('systems').doc('current_state').set({
+      'irrigation': _sistemaRiego,
+      'leds': _leds,
+      'buzzer': _buzzer,
+      'ventilation': _ventilacion,
+      'last_updated': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> _applyChanges() async {
+    try {
+      setState(() => _isLoading = true);
+      await _saveSystemStates();
+      
+      // Registrar el cambio en el log
+      await _firestore.collection('logs').add({
+        'title': 'Cambio de configuración',
+        'description': 'Sistemas actualizados por el usuario',
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': 'system_change',
+        'details': {
+          'riego': _sistemaRiego,
+          'leds': _leds,
+          'buzzer': _buzzer,
+          'ventilacion': _ventilacion,
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Configuración aplicada: ${_countActiveSystems()} sistemas activados',
+            style: const TextStyle(fontSize: 16),
+          ),
+          backgroundColor: Colors.green[700],
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _toggleAllSystems() {
+    final allActive = !_sistemaRiego || !_leds || !_buzzer || !_ventilacion;
+    setState(() {
+      _sistemaRiego = allActive;
+      _leds = allActive;
+      _buzzer = allActive;
+      _ventilacion = allActive;
+    });
+  }
+
+  int _countActiveSystems() {
+    return [_sistemaRiego, _leds, _buzzer, _ventilacion].where((state) => state).length;
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('CONTROL DE SISTEMAS'),
+          backgroundColor: const Color(0xFF1D1E33),
+        ),
+        backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CONTROL DE SISTEMAS'),
@@ -101,12 +210,7 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
   }
 
   Widget _buildStatusSummary() {
-    final activeCount = [
-      _sistemaRiego,
-      _ventilacion,
-      _leds,
-      _buzzer,
-    ].where((state) => state).length;
+    final activeCount = _countActiveSystems();
 
     return Card(
       color: const Color(0xFF1D1E33),
@@ -195,43 +299,5 @@ class _RemoteOpeningScreenState extends State<RemoteOpeningScreen> {
         ),
       ),
     );
-  }
-
-  void _toggleAllSystems() {
-    final allActive = !_sistemaRiego ||
-        !_ventilacion ||
-        !_leds ||
-        !_buzzer ||
-        !_sistemaRiego;
-
-    setState(() {
-      _sistemaRiego = allActive;
-      _ventilacion = allActive;
-      _leds = allActive;
-      _buzzer = allActive;
-    });
-  }
-
-  void _applyChanges() {
-    // Aquí iría la lógica para enviar los comandos al invernadero
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Configuración aplicada: ${_countActiveSystems()} sistemas activados',
-          style: const TextStyle(fontSize: 16),
-        ),
-        backgroundColor: Colors.green[700],
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  int _countActiveSystems() {
-    return [
-      _buzzer,
-      _ventilacion,
-      _leds,
-      _sistemaRiego,
-    ].where((state) => state).length;
   }
 }

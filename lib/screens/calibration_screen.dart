@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../app_theme.dart';
 
 class CalibrationScreen extends StatefulWidget {
@@ -9,6 +11,9 @@ class CalibrationScreen extends StatefulWidget {
 }
 
 class _CalibrationScreenState extends State<CalibrationScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLoading = true;
+  
   // Valores de calibración (0-100)
   double _humedad = 70.0;
   double _temperatura = 25.0;
@@ -17,7 +22,120 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
   double _co2 = 400.0;
 
   @override
+  void initState() {
+    super.initState();
+    _loadCalibrationValues();
+  }
+
+  Future<void> _loadCalibrationValues() async {
+    try {
+      await Firebase.initializeApp();
+      DocumentSnapshot doc = await _firestore.collection('calibration').doc('current_values').get();
+      
+      if (doc.exists) {
+        setState(() {
+          _humedad = doc['humedad']?.toDouble() ?? 70.0;
+          _temperatura = doc['temperatura']?.toDouble() ?? 25.0;
+          _luz = doc['luz']?.toDouble() ?? 60.0;
+          _phSuelo = doc['phSuelo']?.toDouble() ?? 6.5;
+          _co2 = doc['co2']?.toDouble() ?? 400.0;
+          _isLoading = false;
+        });
+      } else {
+        await _saveCalibrationValues();
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      print('Error loading calibration: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveCalibrationValues() async {
+    await _firestore.collection('calibration').doc('current_values').set({
+      'humedad': _humedad,
+      'temperatura': _temperatura,
+      'luz': _luz,
+      'phSuelo': _phSuelo,
+      'co2': _co2,
+      'last_updated': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> _guardarConfiguracion() async {
+    try {
+      setState(() => _isLoading = true);
+      await _saveCalibrationValues();
+      
+      // Registrar el cambio en el log
+      await _firestore.collection('logs').add({
+        'title': 'Calibración actualizada',
+        'description': 'Valores de calibración modificados',
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': 'calibration',
+        'details': {
+          'humedad': _humedad,
+          'temperatura': _temperatura,
+          'luz': _luz,
+          'phSuelo': _phSuelo,
+          'co2': _co2,
+        }
+      });
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1D1E33),
+          title: const Text('Configuración Guardada', style: TextStyle(color: Colors.white)),
+          content: Text(
+            'Nuevos valores:\n'
+            'Humedad: ${_humedad.toStringAsFixed(0)}%\n'
+            'Temperatura: ${_temperatura.toStringAsFixed(1)}°C\n'
+            'Luz: ${_luz.toStringAsFixed(0)}%\n'
+            'pH: ${_phSuelo.toStringAsFixed(1)}\n'
+            'CO₂: ${_co2.toStringAsFixed(0)}ppm',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(color: Colors.blue)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('No se pudo guardar: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('CALIBRACIÓN INVERNADERO'),
+          backgroundColor: const Color(0xFF1D1E33),
+        ),
+        backgroundColor: AppTheme.darkTheme.scaffoldBackgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CALIBRACIÓN INVERNADERO'),
@@ -160,74 +278,4 @@ class _CalibrationScreenState extends State<CalibrationScreen> {
       ),
     );
   }
-
-  void _guardarConfiguracion() {
-    // Aquí iría la lógica para guardar la configuración
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1D1E33),
-        title: const Text('Configuración Guardada', style: TextStyle(color: Colors.white)),
-        content: Text(
-          'Nuevos valores:\n'
-          'Humedad: ${_humedad.toStringAsFixed(0)}%\n'
-          'Temperatura: ${_temperatura.toStringAsFixed(1)}°C\n'
-          'Luz: ${_luz.toStringAsFixed(0)}%\n'
-          'pH: ${_phSuelo.toStringAsFixed(1)}\n'
-          'CO₂: ${_co2.toStringAsFixed(0)}ppm',
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Colors.blue)),
-          ),
-        ],
-      ),
-    );
-  }
 }
-
-
-// 1. Agrega una nueva variable de estado
-//double _nuevoParametro = valorInicial;
-//// 2. Agrega otro _buildCalibrationSlider en el ListView
-//_buildCalibrationSlider(
-//  title: 'Nuevo Parámetro',
-//  value: _nuevoParametro,
-//  unit: 'unidad',
-//  min: valorMin,
-//  max: valorMax,
-//  onChanged: (value) => setState(() => _nuevoParametro = value),
-//),//
-
-//Para conectar con backend:
-//Modifica el método _guardarConfiguracion():
-//void _guardarConfiguracion() async {
-//  try {
-//    // Ejemplo con Firebase
-//    await FirebaseFirestore.instance.collection('config').doc('invernadero').set({
-//      'humedad': _humedad,
-//      'temperatura': _temperatura,
-//      // ... otros parámetros
-//    });
-//    // Mostrar mensaje de éxito
-//  } catch (e) {
-//    // Mostrar mensaje de error
-//  }
-//}
-
-//Para cargar valores guardados:
-//@override
-//void initState() {
-//  super.initState();
-//  _cargarConfiguracion();
-//}
-//
-//void _cargarConfiguracion() async {
-//  final config = await obtenerConfigDeAPI();
-//  setState(() {
-//    _humedad = config.humedad;
-//    // ... otros parámetros
-//  });
-//}

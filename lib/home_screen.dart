@@ -4,9 +4,10 @@ import '../widgets/menu_button.dart';
 import 'screens/remote_opening_screen.dart';
 import 'screens/activity_log_screen.dart';
 import 'screens/manual_cover_screen.dart';
-import 'screens/alerts_screen.dart';
-import 'screens/calibration_screen.dart';
 
+// Usamos alias para evitar conflictos de nombres
+import 'screens/alerts_screen.dart' as alerts_screen;
+import 'screens/calibration_screen.dart' as calibration_screen;
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -34,7 +35,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             MenuButton(
-              iconAsset: 'remote_control', // Nombre del SVG sin extensión
+              iconAsset: 'remote_control',
               title: 'APERTURA REMOTA',
               onPressed: () => _navigateTo(
                 context, 
@@ -62,7 +63,7 @@ class HomeScreen extends StatelessWidget {
               title: 'ALERTAS',
               onPressed: () => _navigateTo(
                 context, 
-                const AlertsScreen(),
+                const alerts_screen.AlertsScreen(), // Usar el alias
               ),
             ),
             MenuButton(
@@ -70,7 +71,7 @@ class HomeScreen extends StatelessWidget {
               title: 'CALIBRACION',
               onPressed: () => _navigateTo(
                 context, 
-                const CalibrationScreen(),
+                const calibration_screen.CalibrationScreen(), // Usar el alias
               ),
             ),
           ],

@@ -18,7 +18,8 @@ dependencies:
   intl: ^0.18.1
   http: ^1.1.0
   mailer: ^6.0.0  # Versión corregida
-  
+  firebase_core: ^2.24.0
+  cloud_firestore: ^4.15.1
 
 dev_dependencies:
   flutter_test:
